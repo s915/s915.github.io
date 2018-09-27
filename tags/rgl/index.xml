@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Rgl on Sébastien Galais</title>
+    <link>https://s915.github.io/tags/rgl/</link>
+    <description>Recent content in Rgl on Sébastien Galais</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2018 S&amp;eacute;bastien Galais</copyright>
+    <lastBuildDate>Thu, 27 Sep 2018 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="https://s915.github.io/tags/rgl/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Calabi-Yau manifold</title>
+      <link>https://s915.github.io/post/2018_09_27-calabi_yau_manifold/</link>
+      <pubDate>Thu, 27 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://s915.github.io/post/2018_09_27-calabi_yau_manifold/</guid>
+      <description>Why this first post ? &amp;hellip; When I started this github page, I wanted to add a logo at the top of the main page and I thought of a Calabi-Yau manifold. In my opinion, the 3D representation of that manifold is particularly artistic and this object is used in a theory that I find highly interesting : string theory (Susskind&amp;rsquo;s website is so cool). Ok the logo is chosen, but I don&amp;rsquo;t want to take a picture from another website, trim it, etc.</description>
+    </item>
+    
+  </channel>
+</rss>

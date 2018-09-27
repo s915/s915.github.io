@@ -1,0 +1,217 @@
+---
+layout: post
+title: Horizontal rainbow bar graph with plotly
+image: /img/rainbow_bars.png
+---
+
+In this post, I show you a possible way to create a horizontal bar plot with `plotly`. For the moment, not so difficult...but the idea here is to represent a quantity by plotting another one with the addition of a color gradient limited by lower and upper bounds. It's a different kettle of fish. The final result is this one:
+
+How do we do that.  First we load [`data.table`](http://cran.r-project.org/web/packages/data.table/index.html)
+and [`magrittr`](http://cran.r-project.org/web/packages/magrittr/index.html) to
+manage the data, [`colorRamps`](http://cran.r-project.org/web/packages/colorRamps/index.html)
+for the color gradient and [`plotly`](http://cran.r-project.org/web/packages/plotly/index.html)
+for itself.
+
+{% highlight R linenos %}
+# Data
+library(data.table)
+library(magrittr)
+# Plot
+library(plotly)
+# Colors
+library(colorRamps)
+{% endhighlight %}
+
+Instead of real names, we use random names generated with the package
+[`randomNames`](http://cran.r-project.org/web/packages/randomNames/index.html) 
+(good idea for tutorials). Here I manually define names in `rnames` if you don't
+want to install `randomNames`.
+
+{% highlight R linenos %}
+# library(randomNames)
+# rnames <- randomNames(20)
+rnames <- c(
+  "Nielsen, Shawn", "Lewis, Sheikhnoor",
+  "Martinez, Cristina", "James, Frances",
+  "Aochi, Marina-Ashley", "al-Ghani, Hujja", 
+  "Janer, Rylynd", "Gonzales, Brennan",
+  "Miller, Howard", "Armstrong, Stephen",
+  "Gibbons, Gagan", "Jones, Lynn",
+  "Rundle, Kaitlyn", "Williams, Xavier",
+  "Gomez, Anthony", "Murali, Kevin",
+  "Wilson, Shekonah", "Morales, Devon",
+  "Maestas, Patrick", "al-Zaman, Mudrika"
+)
+{% endhighlight %}
+
+The main purpose of this post is to plot the <i>Z-score</i> of a quantity associated
+with a name of `rnames`. A little remainder of what is a <i>Z-score</i>:  
+{% raw %}
+$$z_{\text{score}} = \dfrac{x - \mu}{\sigma_x}$$
+{% endraw %}
+where \\(\mu\\) is the mean and \\(\sigma_x\\) is the standard deviation of the quantity
+\\(x\\).
+
+{% highlight r linenos %}
+## Parameters
+# limit on sigma for an alert
+lim <- 1
+
+## Data
+data <- data.table(
+  name = rnames,
+  value = c(rnorm(18, 10, 2), rnorm(1, 15), rnorm(1, 0))
+) %>%
+  # Calculation of the Z-score
+  .[, zscore := (value - mean(value)) / sd(value)] %>%
+  .[]
+{% endhighlight %}
+  
+```
+> data
+                    name     value     zscore
+ 1:       Nielsen, Shawn  9.958424  0.2731729
+ 2:    Lewis, Sheikhnoor 11.379440  0.7305521
+ 3:   Martinez, Cristina 11.949073  0.9138985
+ 4:       James, Frances 10.244874  0.3653717
+ 5: ...
+```
+
+{% highlight r linenos %}
+seq_step <- function(x, lim = 1)
+{
+  x %>%
+    { .[. <= lim & . >= -1* lim] } %>%
+    # Calculation of the delta
+    diff %>%
+    # We omit the zero
+    { .[. != 0] } %>%
+    abs %>%
+    min %>%
+    round(2) %>%
+    max(0.01) %>%
+    # We create a sequence from -lim to lim with a step equal to the minimal
+    # delta
+    { seq(-1 * lim, lim, .) } %>%
+    { seq(-1 * lim, lim, length.out = length(.) + 1) }
+}
+
+# Color gradient for the data inside the range [-lim, lim]
+color_seq <- data$zscore %>%
+  # We keep the Z-score inside the range [-lim, lim]
+  seq_step %>%
+  # The names are the colors
+  { set_names(., rev(matlab.like2(length(.)))) }
+{% endhighlight %}
+  
+```
+> color_seq
+    #BF0000     #FF0000     #FF8000     #FFFF00     #CCFF33 ...
+-1.00000000 -0.82085742 -0.64171485 -0.46257227 -0.28342969 ...
+```
+  
+{% highlight r linenos %}
+data %<>%
+  .[, color := sapply(zscore, function(x){
+    if (x >= lim) {
+      color_seq %>% names %>% tail(1)
+    } else if (x <= -1 * lim) {
+      color_seq %>% names %>% head(1)
+    } else {
+      { color_seq >= x } %>%
+        which %>%
+        head(1) %>%
+        names
+    }
+  })] %>%
+  .[order(-zscore)] %>%
+  .[, name := factor(name, levels = name)]
+{% endhighlight %}
+
+Plotly graph...
+{% highlight r linenos %}
+ply <- plot_ly() %>%
+  add_segments(
+    x = lim, xend = lim,
+    y = data[1,]$name, yend = data[.N,]$name,
+    line = list(width = 2, color = "red"),
+    showlegend = FALSE, hoverinfo = "none"
+  ) %>%
+  add_segments(
+    x = -1 * lim, xend = -1 * lim,
+    y = data[1,]$name, yend = data[.N,]$name,
+    line = list(width = 2, color = "red"),
+    showlegend = FALSE, hoverinfo = "none"
+  ) %>% 
+  add_annotations(
+    x = min(1.25 * min(data$zscore), -1 * lim + 0.2),
+    y = data$name,
+    text = as.character(data$name),
+    font = list(color = "black"),
+    xanchor = 'right', yanchor = 'middle',
+    showarrow = FALSE
+  ) %>%
+  {
+    if (nrow(data[zscore >= 0]) > 0) {
+      add_annotations(., 
+        x = data[zscore >= 0]$zscore,
+        y = data[zscore >= 0]$name,
+        text = data[zscore >= 0]$value %>% round(1) %>% paste("%"),
+        font = list(color = "black"),
+        xanchor = 'left', yanchor = 'middle',
+        showarrow = FALSE
+      )
+    } else {
+      .
+    }
+  } %>%
+  {
+    if (nrow(data[zscore < 0]) > 0) {
+      add_annotations(., 
+        x = data[zscore < 0]$zscore,
+        y = data[zscore < 0]$name,
+        text = data[zscore < 0]$value %>% round(1) %>% paste("%"),
+        font = list(color = "black"),
+        xanchor = 'right', yanchor = 'middle',
+        showarrow = FALSE
+      )
+    } else {
+      .
+    }
+  } %>% 
+  add_data(data) %>%
+  add_trace(
+    x = ~zscore, y = ~name,
+    type = 'bar', orientation = 'h',
+    marker = list(
+      color = data$color
+    ),
+    hoverinfo = "text",
+    text = ~paste0(
+      "<i>", name, "</i></br>  &#8627; z-score = ",
+      round(zscore, 2), "</br>  &#8627; value = ",
+      round(value, 2)
+    ),
+    showlegend = FALSE
+  ) %>%
+  add_annotations(
+    x = 1, y = 0,
+    text = "<i>S\u00e9bastien Galais</i>",
+    xref = "paper", yref = "paper",
+  showarrow = FALSE
+  ) %>%
+  layout(
+    xaxis = list(
+      title = "&#963;",
+      dtick = 1,
+      tickmode = 'array'
+    ),
+    yaxis = list(
+      title = "",
+      showgrid = FALSE, showline = FALSE,
+      showticklabels = FALSE, zeroline = FALSE
+    ),
+    hovermode = "closest"
+  ) %>%
+  config(showLink = FALSE, displaylogo = FALSE)
+{% endhighlight %}

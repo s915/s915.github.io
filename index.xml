@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Sébastien Galais on Sébastien Galais</title>
+    <link>https://s915.github.io/</link>
+    <description>Recent content in Sébastien Galais on Sébastien Galais</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2018 S&amp;eacute;bastien Galais</copyright>
+    <lastBuildDate>Wed, 20 Apr 2016 00:00:00 +0000</lastBuildDate>
+    <atom:link href="/" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Calabi-Yau manifold</title>
+      <link>https://s915.github.io/post/2018_09_27-calabi_yau_manifold/</link>
+      <pubDate>Thu, 27 Sep 2018 00:00:00 +0000</pubDate>
+      
+      <guid>https://s915.github.io/post/2018_09_27-calabi_yau_manifold/</guid>
+      <description>
+
+&lt;p&gt;Why this first post ? &amp;hellip; When I started this github page, I wanted to add a logo at the top of the main page and I thought of a Calabi-Yau manifold. In my opinion, the 3D representation of that manifold is particularly artistic and this object is used in a theory that I find highly interesting : &lt;a href=&#34;http://theoreticalminimum.com/courses/string-theory/2010/fall&#34; target=&#34;_blank&#34;&gt;string theory&lt;/a&gt; (Susskind&amp;rsquo;s website is so cool). Ok the logo is chosen, but I don&amp;rsquo;t want to take a picture from another website, trim it, etc. I thought &amp;ldquo;Let&amp;rsquo;s do it with &lt;em&gt;R&lt;/em&gt;&amp;rdquo;.&lt;br /&gt;
+With the help of Google, I found this interesting (and apparently well known) paper &lt;a href=&#34;https://s915.github.io/docs/CP2-94.pdf&#34;&gt;&amp;ldquo;A Construction for Computer Visualization of Certain Complex Curves&amp;rdquo;&lt;/a&gt; by Andrew J. Hanson (&lt;em&gt;Indiana University&lt;/em&gt;). In his short article, Hanson gives a lot of recipes to visualize complex mathematical objects with a computer. So everything you read in this post isn&amp;rsquo;t new, it&amp;rsquo;s taken from Hanson&amp;rsquo;s article and translated into &lt;em&gt;R&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;First we load the packages &lt;a href=&#34;http://cran.r-project.org/web/packages/rgl/index.html&#34; target=&#34;_blank&#34;&gt;&lt;code&gt;rgl&lt;/code&gt;&lt;/a&gt; to dynamically visualize the manifold and &lt;a href=&#34;http://cran.r-project.org/web/packages/colorRamps/index.html&#34; target=&#34;_blank&#34;&gt;&lt;code&gt;colorRamps&lt;/code&gt;&lt;/a&gt; to add colors to the patches.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;library(colorRamps)
+library(rgl)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;As explained in Hanson&amp;rsquo;s article, we define three functions $u_i\left(\theta, \xi\right)$, $s(k, n)$ and $z_i(k_i, n, \theta, \xi)$ with $i \in \left\lbrace1,2\right\rbrace$.&lt;/p&gt;
+
+&lt;p&gt;The first function $u$ depends on the value of $i$, so there are actually two functions:&lt;/p&gt;
+
+&lt;p&gt;$$
+u_1\left(\theta, \xi\right) = \dfrac{1}{2} \left( e^{\xi + \imath \theta} + e^{-\xi - \imath \theta} \right)
+$$
+$$
+u_2\left(\theta, \xi\right) = \dfrac{1}{2 \imath} \left( e^{\xi + \imath \theta} -  e^{-\xi - \imath \theta} \right)
+$$&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;u &amp;lt;- function(index, theta, ksi, i = complex(1, 0, 1)) {
+  if (!(index %in% 1:2)) {
+    stop(&amp;quot;index value must be 1 or 2.&amp;quot;)
+  }
+
+  if (index == 1) {
+    0.5 * (exp(ksi + i * theta) + exp(-1 * (ksi + i * theta)))
+  } else {
+    -0.5 * i * (exp(ksi + i * theta) - exp(-1 * (ksi + i * theta)))
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The second function $s$ is simply a complex exponential:&lt;/p&gt;
+
+&lt;p&gt;$$s(k, n) = e^{\frac{2 \imath \pi k}{n}}$$&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;s &amp;lt;- function(k, n, i = complex(1, 0, 1)) {
+  exp(2 * pi * k * i / n)
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The third function $z$ is a combination of the previous functions:&lt;/p&gt;
+
+&lt;p&gt;$$z_i(k, n, \theta, \xi) = s(k_i,n) \times u_i(\theta, \xi)^{\frac{2}{n}}$$&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;z &amp;lt;- function(k, n, index, theta, ksi) {
+  s(k, n) * (u(index, theta, ksi))^(2 / n)
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now we have everything to draw our Calabi-Yau manifold in 3D. We&amp;rsquo;re going to cover two ranges of values which are $\theta \in \left[0, \dfrac{\pi}{2}\right]$ and $\xi\in\left[-1,1\right]$. To construct a manifold with a particular value of $n$, we define to integers $k_1$ and $k_2$ with $0\leq k_i &amp;lt; n$. Each couple $\left(k_1, k_2\right)$ corresponds to a patch in the manifold that we can colorize with the option &lt;code&gt;color&lt;/code&gt;.&lt;br /&gt;
+Obviously, two complex numbers $z_1$ and $z_2$ give us 4 dimensions. In order to limit our object to 3 dimensions, one of the axis (here $e_3$) has to be a combination of two dimensions. It will be a mix of the imaginary parts of the complex numbers with an angle $\phi = \dfrac{\pi}{4}$. We define:&lt;/p&gt;
+
+&lt;p&gt;$$e_1 = \Re\left(z_1(k_1, n, \theta, \xi)\right)$$
+$$e_2 = \Re\left(z_2(k_2, n, \theta, \xi)\right)$$
+$$e_3 = \cos(\phi)\times\Im\left(z_1(k_1, n, \theta, \xi)\right) + \sin(\phi)\times\Im\left(z_2(k_2, n, \theta, \xi)\right)$$&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;calabi_yau &amp;lt;- function(
+  N, color = FALSE,
+  Theta = c(0, pi / 2, 17), Ksi = c(-1, 1, 17), Angle = pi / 4,
+  color_default = &amp;quot;white&amp;quot;, color_bg = &amp;quot;black&amp;quot;
+) {
+  k1_ &amp;lt;- seq(0, N - 1)
+  k2_ &amp;lt;- seq(0, N - 1)
+  ksi_ &amp;lt;- seq(Ksi[1], Ksi[2], length.out = Ksi[3])
+  theta_ &amp;lt;- seq(Theta[1], Theta[2], length.out = Theta[3])
+
+  if (color) {
+    cols_ &amp;lt;- blue2red(length(k1_)^2)
+  } else {
+    cols_ &amp;lt;- rep(color_default, length(k1_)^2)
+  }
+
+  tryCatch({
+    rgl.close()
+  }, error = function(e){
+  }) 
+  
+  j &amp;lt;- 1
+      
+  for (k1 in k1_) {
+    for (k2 in k2_) {
+      xm &amp;lt;- outer(ksi_, theta_, function(x, t) {
+        Re(z(k1, N, 1, t, x))
+      })
+
+      ym &amp;lt;- outer(ksi_, theta_, function(x, t) {
+        Re(z(k2, N, 2, t, x))
+      })
+
+      zm &amp;lt;- outer(ksi_, theta_, function(x, t) {
+        cos(Angle) * Im(z(k1, N, 1, t, x)) +
+        sin(Angle) * Im(z(k2, N, 2, t, x))
+      })
+      
+      type &amp;lt;- &amp;quot;lines&amp;quot;
+      rgl.bg(color = color_bg)
+      surface3d(
+        x = xm, y = ym, z = zm,
+        color = cols_[j], lit = FALSE, front = type, back = type
+      )
+      
+      j &amp;lt;- j + 1
+    }
+  }
+  
+  invisible()
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s have a look at the result for $n=4$ &amp;hellip;&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;calabi_yau(4)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://s915.github.io/img/calabi_yau_4_bw.png&#34; alt=&#34;CY_4_bw&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;As I mentioned above, by using &lt;code&gt;color = TRUE&lt;/code&gt;, you can distinguish the multiple patches created and assembled to form the Calabi-Yau manifold.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;calabi_yau(4, color = TRUE)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://s915.github.io/img/calabi_yau_4_color.png&#34; alt=&#34;CY_4_color&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;And just for fun let&amp;rsquo;s go inside a Calabi-Yau manifold with $n = 12$.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;calabi_yau(12, color = TRUE)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://s915.github.io/img/calabi_yau_12_color.png&#34; alt=&#34;CY_12_color&#34; /&gt;&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&#34;entire-r-script&#34;&gt;Entire &lt;em&gt;R&lt;/em&gt; script:&lt;/h2&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;library(colorRamps)
+library(rgl)
+
+u &amp;lt;- function(index, theta, ksi, i = complex(1, 0, 1)) {
+  if (!(index %in% 1:2)) {
+    stop(&amp;quot;index value must be 1 or 2.&amp;quot;)
+  }
+
+  if (index == 1) {
+    0.5 * (exp(ksi + i * theta) + exp(-1 * (ksi + i * theta)))
+  } else {
+    -0.5 * i * (exp(ksi + i * theta) - exp(-1 * (ksi + i * theta)))
+  }
+}
+
+s &amp;lt;- function(k, n, i = complex(1, 0, 1)) {
+  exp(2 * pi * k * i / n)
+}
+
+z &amp;lt;- function(k, n, index, theta, ksi) {
+  s(k, n) * (u(index, theta, ksi))^(2 / n)
+}
+
+calabi_yau &amp;lt;- function(
+  N, color = FALSE,
+  Theta = c(0, pi / 2, 17), Ksi = c(-1, 1, 17), Angle = pi / 4,
+  color_default = &amp;quot;white&amp;quot;, color_bg = &amp;quot;black&amp;quot;
+) {
+  k1_ &amp;lt;- seq(0, N - 1)
+  k2_ &amp;lt;- seq(0, N - 1)
+  ksi_ &amp;lt;- seq(Ksi[1], Ksi[2], length.out = Ksi[3])
+  theta_ &amp;lt;- seq(Theta[1], Theta[2], length.out = Theta[3])
+
+  if (color) {
+    cols_ &amp;lt;- blue2red(length(k1_)^2)
+  } else {
+    cols_ &amp;lt;- rep(color_default, length(k1_)^2)
+  }
+
+  tryCatch({
+    rgl.close()
+  }, error = function(e){
+  }) 
+  
+  j &amp;lt;- 1
+      
+  for (k1 in k1_) {
+    for (k2 in k2_) {
+      xm &amp;lt;- outer(ksi_, theta_, function(x, t) {
+        Re(z(k1, N, 1, t, x))
+      })
+
+      ym &amp;lt;- outer(ksi_, theta_, function(x, t) {
+        Re(z(k2, N, 2, t, x))
+      })
+
+      zm &amp;lt;- outer(ksi_, theta_, function(x, t) {
+        cos(Angle) * Im(z(k1, N, 1, t, x)) +
+        sin(Angle) * Im(z(k2, N, 2, t, x))
+      })
+      
+      type &amp;lt;- &amp;quot;lines&amp;quot;
+      rgl.bg(color = color_bg)
+      surface3d(
+        x = xm, y = ym, z = zm,
+        color = cols_[j], lit = FALSE, front = type, back = type
+      )
+      
+      j &amp;lt;- j + 1
+    }
+  }
+  
+  invisible()
+}
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
