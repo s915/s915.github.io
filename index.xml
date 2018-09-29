@@ -152,7 +152,7 @@ $$e_3 = \cos(\phi)\times\Im\left(z_1(k_1, n, \theta, \xi)\right) + \sin(\phi)\ti
 
 &lt;hr /&gt;
 
-&lt;h2 id=&#34;entire-r-script&#34;&gt;Entire &lt;em&gt;R&lt;/em&gt; script:&lt;/h2&gt;
+&lt;h2 id=&#34;entire-r-script-just-copy-and-paste&#34;&gt;Entire &lt;em&gt;R&lt;/em&gt; script (just copy and paste):&lt;/h2&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;library(colorRamps)
 library(rgl)
